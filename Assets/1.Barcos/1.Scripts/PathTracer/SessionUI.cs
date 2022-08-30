@@ -36,7 +36,11 @@ namespace PathTracer
             if (!isActive) return;
             if (Time.time < lastTick + refreshRateTime) return;
             velocimeterText.text = sessionManager.actualTarget.Value.speedInKnots.ToString("0.0");
-            dateText.text = sessionManager.actualTarget.Value.timestamp.Split(' ')[1];
+            try
+            {
+                dateText.text = sessionManager.actualTarget.Value.timestamp.Split(' ')[1];
+            }
+            catch { }
             //temperatureText.text = sessionManager.actualTarget.Value.speed.ToString("0.0");
             lastTick = Time.time;
         }

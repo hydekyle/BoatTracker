@@ -30,18 +30,11 @@ namespace PathTracer
 
         public static async UniTask<SessionData> GetSessionDataBySessionID(string sessionID)
         {
-            // var endpoint = "https://developkanarasports.herokuapp.com/getSession?session_id=" + sessionID;
-            // var webRequest = UnityWebRequest.Get(endpoint);
-            // await webRequest.SendWebRequest();
-            // if (webRequest.result == UnityWebRequest.Result.ConnectionError) throw new Exception("Connection Error");
-            // var session = JsonUtility.FromJson<SessionData>(webRequest.downloadHandler.text);
-            // session.PrecalculateAllRecordPosition();
-            // return session;
-
-            //TODO: Use JSON from server instead
-            await UniTask.Delay(1);
-            TextAsset targetFile = Resources.Load<TextAsset>("data-points");
-            var session = JsonUtility.FromJson<SessionData>(targetFile.text);
+            var endpoint = "https://developkanarasports.herokuapp.com/getSession?session_id=" + sessionID;
+            var webRequest = UnityWebRequest.Get(endpoint);
+            await webRequest.SendWebRequest();
+            if (webRequest.result == UnityWebRequest.Result.ConnectionError) throw new Exception("Connection Error");
+            var session = JsonUtility.FromJson<SessionData>(webRequest.downloadHandler.text);
             session.PrecalculateAllRecordPosition();
             return session;
         }
