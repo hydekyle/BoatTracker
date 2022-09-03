@@ -9,6 +9,7 @@ public class OrbitCamera : MonoBehaviour
 {
     public FixedJoystick zoomJoystick;
     public FloatingJoystick movementJoystick;
+    public float zoomSpeed = 2f;
 
     [SerializeField]
     private FocusPoint _target;
@@ -74,7 +75,7 @@ public class OrbitCamera : MonoBehaviour
         this.transform.position = _target.transform.position + offset;
 
         _cam.Move(movementJoystick.Horizontal, -movementJoystick.Vertical);
-        _distance -= zoomJoystick.Vertical;
+        _distance -= zoomJoystick.Horizontal * zoomSpeed;
         transform.position = new Vector3(transform.position.x, Mathf.Clamp(transform.position.y, 10f, Mathf.Infinity), transform.position.z);
     }
 

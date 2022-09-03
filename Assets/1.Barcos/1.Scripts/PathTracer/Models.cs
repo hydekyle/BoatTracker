@@ -38,6 +38,15 @@ namespace PathTracer
             session.PrecalculateAllRecordPosition();
             return session;
         }
+
+        public static SessionData GetTestSessionData()
+        {
+            TextAsset targetFile = Resources.Load<TextAsset>("data-points");
+            var session = JsonUtility.FromJson<SessionData>(targetFile.text);
+            session.PrecalculateAllRecordPosition();
+            return session;
+        }
+
     }
 
     [Serializable]
