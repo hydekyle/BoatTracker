@@ -34,17 +34,6 @@ namespace PathTracer
             OnTimeSpeedChanged();
         }
 
-        void OnTimeSpeedChanged()
-        {
-            sessionManager.navigationVelocity.Value = 10 * timeSpeed.Value;
-            timebackArrows[2].color = timeSpeed.Value <= -3 ? Color.yellow : Color.white;
-            timebackArrows[1].color = timeSpeed.Value <= -2 ? Color.yellow : Color.white;
-            timebackArrows[0].color = timeSpeed.Value <= -1 ? Color.yellow : Color.white;
-            timeforwardArrows[0].color = timeSpeed.Value >= 1 ? Color.yellow : Color.white;
-            timeforwardArrows[1].color = timeSpeed.Value >= 2 ? Color.yellow : Color.white;
-            timeforwardArrows[2].color = timeSpeed.Value >= 3 ? Color.yellow : Color.white;
-        }
-
         void Update()
         {
             UpdateNavigationUI();
@@ -54,12 +43,12 @@ namespace PathTracer
         {
             if (!isActive) return;
             // Every frame update
-            RotateCompassArrowByNavigator(sessionManager.navT);
-            MoveAvatarRunner();
+            UIRotateCompassArrowByNavigator(sessionManager.navT);
+            UIUpdateNavigatorPosition();
             // Time delay update (to avoid displayed data changing too fast)
             if (Time.time < lastTick + refreshRateTime) return;
             speedText.text = targetRecord.speedInKnots.ToString("0.0");
-            nmText.text = (sessionManager.traveledDistanceTotal / 1000).ToString("0");
+            nmText.text = (sessionManager.traveledDistanceTotal / 1000).ToString("0.00");
             vmgText.text = targetRecord.vmg.ToString("0.00");
             try
             {
@@ -72,14 +61,31 @@ namespace PathTracer
             lastTick = Time.time;
         }
 
-        void MoveAvatarRunner()
+        void OnTimeSpeedChanged()
+        {
+            sessionManager.navigationVelocity.Value = 10 * timeSpeed.Value;
+            UISetTimeArrowColorByTimespeed(sessionManager.navigationVelocity.Value);
+        }
+
+        void UISetTimeArrowColorByTimespeed(float timeSpeed)
+        {
+            timebackArrows[2].color = timeSpeed <= -3 ? Color.yellow : Color.white;
+            timebackArrows[1].color = timeSpeed <= -2 ? Color.yellow : Color.white;
+            timebackArrows[0].color = timeSpeed <= -1 ? Color.yellow : Color.white;
+            timeforwardArrows[0].color = timeSpeed >= 1 ? Color.yellow : Color.white;
+            timeforwardArrows[1].color = timeSpeed >= 2 ? Color.yellow : Color.white;
+            timeforwardArrows[2].color = timeSpeed >= 3 ? Color.yellow : Color.white;
+        }
+
+        /// <summary> Set position in timeline for avatar UI </summary>
+        void UIUpdateNavigatorPosition()
         {
             var lerpValue = (float)sessionManager.targetNext / (float)sessionManager.maxTargets;
             var targetPos = Vector3.Lerp(pointerStart.position, pointerFinish.position, lerpValue);
             myRunnerAvatar.position = Vector3.MoveTowards(myRunnerAvatar.position, targetPos, Time.deltaTime * 100);
         }
 
-        void RotateCompassArrowByNavigator(Transform navigator)
+        void UIRotateCompassArrowByNavigator(Transform navigator)
         {
             arrowCompass.transform.localRotation = Quaternion.Lerp(arrowCompass.transform.localRotation, Quaternion.Euler(0, 0, navigator.transform.rotation.eulerAngles.y), Time.deltaTime * compassSpeed);
         }
