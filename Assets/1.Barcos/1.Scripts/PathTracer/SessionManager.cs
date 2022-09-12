@@ -13,56 +13,52 @@ namespace PathTracer
         public static SessionManager Instance;
         [Tooltip("Load Session Data for testing from local resources")]
         public bool useTestSession;
-        [Tooltip("The sessionID for API request")]
-        public string sessionID;
+        [Tooltip("Load multiples sessions at time")]
+        public List<string> sessionIDs;
         [HideInInspector]
         public Observable<NavigatorAgent> focusAgent;
         public Observable<float> navigationTimeVelocity = new() { Value = 1f };
-        public Observable<float> pathLineWidth = new();
-        public Color startPathColor, endPathColor;
         public bool isNavigating = false;
         public List<NavigatorAgent> navAgents = new();
         public GameObject navigatorPlaceholder;
         public OrbitCamera orbitCamera;
-        LineRenderer linePathRenderer;
 
         void Awake()
         {
             Instance = this;
-            linePathRenderer = GetComponent<LineRenderer>();
-            pathLineWidth.OnChanged += delegate ()
-            {
-                linePathRenderer.startWidth = pathLineWidth.Value;
-                linePathRenderer.endWidth = pathLineWidth.Value;
-            };
         }
 
         async void Start()
         {
-            var myNavigatorAgent = useTestSession ? NavigatorAgent.GetNavigatorAgentTest() : await NavigatorAgent.GetNavigatorAgentBySessionID(sessionID);
+            var myNavigatorAgent = await NavigatorAgent.GetNavigatorListBySessionList(sessionIDs);
             NavegationStart(myNavigatorAgent);
         }
 
-        void Update()
+        void NavegationStart(List<NavigatorAgent> navigatorAgentList)
         {
-            if (isNavigating)
+            foreach (var navigatorAgent in navigatorAgentList)
+            {
+                navigatorAgent.navT.position = navigatorAgent.positions[0];
+                navigatorAgent.navT.LookAt(navigatorAgent.positions[1]);
+                orbitCamera.Target = navigatorAgent.navT.GetComponent<FocusPoint>();
+                focusAgent.Value = navigatorAgent;
+                navAgents.Add(navigatorAgent);
+            }
+            orbitCamera.enabled = true;
+            isNavigating = true;
+            NavigationRoutine().Forget();
+        }
+
+        async UniTaskVoid NavigationRoutine()
+        {
+            while (isNavigating)
             {
                 for (var x = 0; x < navAgents.Count; x++)
                 {
                     Navigate(navAgents[x]);
                 }
+                await UniTask.Yield(PlayerLoopTiming.Update);
             }
-        }
-
-        void NavegationStart(NavigatorAgent navigatorAgent)
-        {
-            focusAgent.Value = navigatorAgent;
-            navigatorAgent.navT.position = navigatorAgent.positions[0];
-            navigatorAgent.navT.LookAt(navigatorAgent.positions[1]);
-            orbitCamera.Target = navigatorAgent.navT.GetComponent<FocusPoint>();
-            orbitCamera.enabled = true;
-            navAgents.Add(navigatorAgent);
-            isNavigating = true;
         }
 
         void Navigate(NavigatorAgent navigatorAgent)
@@ -93,17 +89,6 @@ namespace PathTracer
                 }
             }
         }
-
-        // void DrawPath(SessionData sessionData)
-        // {
-        //     linePathRenderer.positionCount = sessionData.records.Count;
-        //     linePathRenderer.startColor = startPathColor;
-        //     linePathRenderer.endColor = endPathColor;
-        //     for (var x = 0; x < sessionData.records.Count; x++)
-        //     {
-        //         linePathRenderer.SetPosition(x, sessionData.records[x].position);
-        //     }
-        // }
 
     }
 }

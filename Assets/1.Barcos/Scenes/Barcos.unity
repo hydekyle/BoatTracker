@@ -155,8 +155,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c0ddd5b1d30003648acc6a238eb06da4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  useTestSession: 1
-  sessionID: 62c070ddf466b37f143ac3ce
+  useTestSession: 0
+  sessionIDs:
+  - 62c091418db590ce3e361e11
+  - 62c0cd93795cd7abc6e56710
+  - 62c05e6a9d3c596d9f28786b
+  - 62c05ba4886ebb4e19b449f0
+  - 62c07a1af466b37f143ac3ea
   focusAgent:
     value:
       navT: {fileID: 0}
@@ -185,10 +190,6 @@ MonoBehaviour:
       navigationIndexNext: 0
   navigationTimeVelocity:
     value: 1
-  pathLineWidth:
-    value: 0
-  startPathColor: {r: 0, g: 0, b: 0, a: 0}
-  endPathColor: {r: 0, g: 0, b: 0, a: 0}
   isNavigating: 0
   navAgents: []
   navigatorPlaceholder: {fileID: 2256923533554560568, guid: d03c8544e238fba4ab7e0ab97c2df8b6,

@@ -21,9 +21,14 @@ namespace PathTracer
         {
             this.mySessionData = sessionData;
             maxTargets = mySessionData.records.Count;
+            CalculateAllRecordPosition();
+            InstantiateAgentView();
+        }
+
+        private void InstantiateAgentView()
+        {
             var newGO = GameObject.Instantiate(SessionManager.Instance.navigatorPlaceholder);
             navT = newGO.transform;
-            CalculateAllRecordPosition();
         }
 
         /// <summary> Calculate positions from records to start from Vector3.zero  </summary>
@@ -34,6 +39,20 @@ namespace PathTracer
             {
                 positions.Add(new Vector3(record.lat * Mathf.Pow(10, 6), 0, record.lng * Mathf.Pow(10, 6)) / 10 - startPoint);
             }
+        }
+
+        public static async UniTask<List<NavigatorAgent>> GetNavigatorListBySessionList(List<string> sessionIDs)
+        {
+            var navList = new List<NavigatorAgent>();
+            var endpoint = "https://kanarakitesurfing.herokuapp.com/getUnitySessions";
+            var body = GetBodyBySessionIDs(sessionIDs);
+            var webRequest = UnityWebRequest.Put(endpoint, body);
+            webRequest.SetRequestHeader("Content-Type", "application/json");
+            await webRequest.SendWebRequest();
+            if (webRequest.result == UnityWebRequest.Result.ConnectionError) throw new Exception("Connection Error");
+            var sessionList = JsonUtility.FromJson<SessionList>(webRequest.downloadHandler.text).sessions;
+            foreach (var session in sessionList) navList.Add(new NavigatorAgent(session));
+            return navList;
         }
 
         public static async UniTask<NavigatorAgent> GetNavigatorAgentBySessionID(string sessionID)
@@ -55,6 +74,18 @@ namespace PathTracer
             return navAgent;
         }
 
+        public static string GetBodyBySessionIDs(List<string> sessionIDs)
+        {
+            var input = "[ ";
+            for (var x = 0; x < sessionIDs.Count; x++)
+            {
+                input += $"\"{sessionIDs[x]}\"";
+                if (x < sessionIDs.Count - 1) input += ", ";
+            }
+            input += " ]";
+            return input;
+        }
+
         public PathRecord GetTargetPathRecord()
         {
             return mySessionData.records[targetNext];
@@ -74,6 +105,12 @@ namespace PathTracer
         {
             return positions[targetNext - 1];
         }
+    }
+
+    [Serializable]
+    public struct SessionList
+    {
+        public List<SessionData> sessions;
     }
 
     [Serializable]
