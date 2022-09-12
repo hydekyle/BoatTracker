@@ -20,16 +20,10 @@ namespace PathTracer
         public float compassSpeed = 5f;
         float lastTick = 0f;
         bool isActive = false;
-        PathRecord targetRecord;
         Observable<int> timeSpeed = new Observable<int>() { Value = 1 };
 
         void Start()
         {
-            sessionManager.actualTarget.OnChangedValues += delegate (PathRecord previousTargetRecord, PathRecord actualTargetRecord)
-            {
-                isActive = true;
-                targetRecord = actualTargetRecord;
-            };
             timeSpeed.OnChanged += OnTimeSpeedChanged;
             OnTimeSpeedChanged();
         }
@@ -41,14 +35,16 @@ namespace PathTracer
 
         void UpdateNavigationUI()
         {
-            if (!isActive) return;
+            if (!sessionManager.isNavigating) return;
             // Every frame update
-            UIRotateCompassArrowByNavigator(sessionManager.navT);
+            var agent = sessionManager.focusAgent.Value;
+            var targetRecord = agent.GetTargetPathRecord();
+            UIRotateCompassArrowByNavigator(agent.navT);
             UIUpdateNavigatorPosition();
             // Time delay update (to avoid displayed data changing too fast)
             if (Time.time < lastTick + refreshRateTime) return;
             speedText.text = targetRecord.speedInKnots.ToString("0.0");
-            nmText.text = (sessionManager.traveledDistanceTotal / 1000).ToString("0.00");
+            nmText.text = (sessionManager.focusAgent.Value.traveledDistanceTotal / 1000).ToString("0.00");
             vmgText.text = targetRecord.vmg.ToString("0.00");
             try
             {
@@ -63,8 +59,8 @@ namespace PathTracer
 
         void OnTimeSpeedChanged()
         {
-            sessionManager.navigationVelocity.Value = 10 * timeSpeed.Value;
-            UISetTimeArrowColorByTimespeed(sessionManager.navigationVelocity.Value);
+            sessionManager.navigationTimeVelocity.Value = 10 * timeSpeed.Value;
+            UISetTimeArrowColorByTimespeed(timeSpeed.Value);
         }
 
         void UISetTimeArrowColorByTimespeed(float timeSpeed)
@@ -80,7 +76,8 @@ namespace PathTracer
         /// <summary> Set position in timeline for avatar UI </summary>
         void UIUpdateNavigatorPosition()
         {
-            var lerpValue = (float)sessionManager.targetNext / (float)sessionManager.maxTargets;
+            var agent = sessionManager.focusAgent.Value;
+            var lerpValue = (float)agent.targetNext / (float)agent.maxTargets;
             var targetPos = Vector3.Lerp(pointerStart.position, pointerFinish.position, lerpValue);
             myRunnerAvatar.position = Vector3.MoveTowards(myRunnerAvatar.position, targetPos, Time.deltaTime * 100);
         }

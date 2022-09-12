@@ -10,26 +10,25 @@ namespace PathTracer
 {
     public class SessionManager : MonoBehaviour
     {
+        public static SessionManager Instance;
         [Tooltip("Load Session Data for testing from local resources")]
         public bool useTestSession;
         [Tooltip("The sessionID for API request")]
         public string sessionID;
-        public Transform navT;
-        public Color startPathColor, endPathColor;
-        public Observable<float> navigationVelocity = new() { Value = 1f };
+        [HideInInspector]
+        public Observable<NavigatorAgent> focusAgent;
+        public Observable<float> navigationTimeVelocity = new() { Value = 1f };
         public Observable<float> pathLineWidth = new();
-        [HideInInspector]
-        public Observable<PathRecord> actualTarget;
-        [HideInInspector]
-        public int maxTargets, targetNext;
-        public float traveledDistanceTotal = 0f;
-        int navigationIndex = 0, navigationIndexPrev = 0, navigationIndexNext = 1;
-        bool isNavigating = false;
+        public Color startPathColor, endPathColor;
+        public bool isNavigating = false;
+        public List<NavigatorAgent> navAgents = new();
+        public GameObject navigatorPlaceholder;
+        public OrbitCamera orbitCamera;
         LineRenderer linePathRenderer;
-        SessionData mySessionData;
 
         void Awake()
         {
+            Instance = this;
             linePathRenderer = GetComponent<LineRenderer>();
             pathLineWidth.OnChanged += delegate ()
             {
@@ -40,71 +39,71 @@ namespace PathTracer
 
         async void Start()
         {
-            mySessionData = useTestSession ? SessionData.GetTestSessionData() : await SessionData.GetSessionDataBySessionID(sessionID);
-            //DrawPath(mySessionData);
-            NavegationStart(mySessionData);
+            var myNavigatorAgent = useTestSession ? NavigatorAgent.GetNavigatorAgentTest() : await NavigatorAgent.GetNavigatorAgentBySessionID(sessionID);
+            NavegationStart(myNavigatorAgent);
         }
 
         void Update()
         {
-            if (isNavigating) Navigate();
+            if (isNavigating)
+            {
+                for (var x = 0; x < navAgents.Count; x++)
+                {
+                    Navigate(navAgents[x]);
+                }
+            }
         }
 
-        public PathRecord GetActualTarget()
+        void NavegationStart(NavigatorAgent navigatorAgent)
         {
-            return mySessionData.records[targetNext];
-        }
-
-        public PathRecord GetPreviousTarget()
-        {
-            return mySessionData.records[targetNext - 1];
-        }
-
-        void NavegationStart(SessionData sessionData)
-        {
-            maxTargets = sessionData.records.Count;
-            navT.position = sessionData.records[0].position;
-            navT.LookAt(sessionData.records[1].position);
-            targetNext = 1;
+            focusAgent.Value = navigatorAgent;
+            navigatorAgent.navT.position = navigatorAgent.positions[0];
+            navigatorAgent.navT.LookAt(navigatorAgent.positions[1]);
+            orbitCamera.Target = navigatorAgent.navT.GetComponent<FocusPoint>();
+            orbitCamera.enabled = true;
+            navAgents.Add(navigatorAgent);
             isNavigating = true;
         }
 
-        void Navigate()
+        void Navigate(NavigatorAgent navigatorAgent)
         {
-            var isSpeedPositive = navigationVelocity.Value > 0;
-            var targetRecord = isSpeedPositive ? GetActualTarget() : GetPreviousTarget();
-            actualTarget.Value = targetRecord;
-            var speed = (10 + targetRecord.speed) * Mathf.Abs(navigationVelocity.Value);
+            var isTimeSpeedPositive = navigationTimeVelocity.Value > 0;
+            var targetPosition = isTimeSpeedPositive ? navigatorAgent.GetTargetPosition() : navigatorAgent.GetPreviousTargetPosition();
+            var targetRecord = isTimeSpeedPositive ? navigatorAgent.GetTargetPathRecord() : navigatorAgent.GetPreviousPathRecord();
+            var speed = (10 + targetRecord.speed) * Mathf.Abs(navigationTimeVelocity.Value);
+            var navT = navigatorAgent.navT;
+            var targetNext = navigatorAgent.targetNext;
+            var maxTargets = navigatorAgent.maxTargets;
             //TODO: Use Timestamp between points if we want to Lerp at real time
-            navT.position = Vector3.MoveTowards(navT.position, targetRecord.position, speed * Time.deltaTime);
-            if (navT.position == targetRecord.position)
+            navT.position = Vector3.MoveTowards(navT.position, targetPosition, speed * Time.deltaTime);
+            if (navT.position == targetPosition)
             {
-                if (isSpeedPositive && targetNext + 1 < mySessionData.records.Count)
+                if (isTimeSpeedPositive && targetNext + 1 < maxTargets)
                 {
-                    traveledDistanceTotal += actualTarget.Value.geoDist;
-                    targetNext++;
-                    navT.LookAt(mySessionData.records[targetNext].position);
+                    navigatorAgent.traveledDistanceTotal += navigatorAgent.mySessionData.records[targetNext].geoDist;
+                    navigatorAgent.targetNext++;
+                    navT.LookAt(navigatorAgent.positions[navigatorAgent.targetNext]);
                 }
-                else if (!isSpeedPositive && targetNext - 1 > 0)
+                else if (!isTimeSpeedPositive && navigatorAgent.targetNext - 1 > 0)
                 {
-                    traveledDistanceTotal -= actualTarget.Value.geoDist;
-                    targetNext--;
+                    navigatorAgent.traveledDistanceTotal -= navigatorAgent.mySessionData.records[targetNext].geoDist;
+                    navigatorAgent.targetNext--;
                     // Apply delay to avoid LookAt to actual position while time rewind
-                    UniTask.DelayFrame(10).ContinueWith(delegate () { navT.LookAt(mySessionData.records[targetNext].position); }).Forget();
+                    UniTask.DelayFrame(10).ContinueWith(delegate () { navT.LookAt(navigatorAgent.positions[navigatorAgent.targetNext]); }).Forget();
                 }
             }
         }
 
-        void DrawPath(SessionData sessionData)
-        {
-            linePathRenderer.positionCount = sessionData.records.Count;
-            linePathRenderer.startColor = startPathColor;
-            linePathRenderer.endColor = endPathColor;
-            for (var x = 0; x < sessionData.records.Count; x++)
-            {
-                linePathRenderer.SetPosition(x, sessionData.records[x].position);
-            }
-        }
+        // void DrawPath(SessionData sessionData)
+        // {
+        //     linePathRenderer.positionCount = sessionData.records.Count;
+        //     linePathRenderer.startColor = startPathColor;
+        //     linePathRenderer.endColor = endPathColor;
+        //     for (var x = 0; x < sessionData.records.Count; x++)
+        //     {
+        //         linePathRenderer.SetPosition(x, sessionData.records[x].position);
+        //     }
+        // }
 
     }
 }
